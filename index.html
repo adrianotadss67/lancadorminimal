@@ -95,6 +95,13 @@
   <div id="data">--/--/--</div>
 
   <button id="menuToggle">☰ Menu</button>
+  <script>
+  document.getElementById('menuToggle').addEventListener('click', () => {
+    const menu = document.getElementById('menuContainer');
+    menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
+  });
+</script>
+
   <div id="menuContainer">
     <button id="share" class="hidden">🔗 Compartilhar esta página</button>
     <button id="restaurar">🔄 Mostrar todos os atalhos</button>
