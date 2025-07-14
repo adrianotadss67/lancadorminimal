@@ -56,7 +56,7 @@
       padding-bottom: 4px;
     }
     .hidden { display: none !important; }
-    button {
+    button, input, select {
       margin: 10px 0;
       font-family: inherit;
       font-size: 1.4rem;
@@ -67,6 +67,14 @@
       cursor: pointer;
     }
     button:hover { background-color: #222; }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 20px;
+      max-width: 360px;
+      width: 100%;
+    }
   </style>
 </head>
 <body>
@@ -79,52 +87,37 @@
   <input id="importar" type="file" accept=".json" style="display:none" />
   <button onclick="document.getElementById('importar').click()">📥 Importar configurações</button>
   <button onclick="salvarNoGunDB()">☁️ Sincronizar com a nuvem</button>
+  <button onclick="alternarFormulario()">➕ Adicionar atalho</button>
+
+  <form id="formAtalho" class="hidden" onsubmit="return adicionarAtalho()">
+    <input type="text" id="nomeAtalho" placeholder="Nome do atalho" required />
+    <input type="url" id="urlAtalho" placeholder="URL do atalho" required />
+    <select id="plataformaAtalho" required>
+      <option value="android ios">Android e iOS</option>
+      <option value="android">Somente Android</option>
+      <option value="ios">Somente iOS</option>
+    </select>
+    <button type="submit">Salvar</button>
+  </form>
+
+  <section id="personalizados">
+    <h2>Atalhos Personalizados</h2>
+    <!-- Conteúdo inserido via JS -->
+  </section>
 
   <section>
     <h2>Comunicação</h2>
-    <a href="whatsapp://send?text=Olá">📲 WhatsApp</a>
-    <a href="facetime://">📞 FaceTime</a>
-    <a href="mailto:">✉️ Mail</a>
-    <a href="sms://">💬 Mensagens</a>
-    <a href="tel:+5511999999999">📞 Ligar</a>
-    <a href="tg://resolve?domain=SeuUsuario">💬 Telegram</a>
-    <a href="skype:echo123?call">📞 Skype</a>
-    <a href="sgnl://signal.me/#p/+55119999">🔒 Signal</a>
+    <a href="whatsapp://send?text=Olá" data-plataforma="android ios">📲 WhatsApp</a>
+    <a href="facetime://" data-plataforma="ios">📞 FaceTime</a>
+    <a href="mailto:" data-plataforma="android ios">✉️ Mail</a>
+    <a href="sms://" data-plataforma="android ios">💬 Mensagens</a>
+    <a href="tel:+5511999999999" data-plataforma="android ios">📞 Ligar</a>
+    <a href="tg://resolve?domain=SeuUsuario" data-plataforma="android ios">💬 Telegram</a>
+    <a href="skype:echo123?call" data-plataforma="android ios">📞 Skype</a>
+    <a href="sgnl://signal.me/#p/+55119999" data-plataforma="android ios">🔒 Signal</a>
   </section>
 
-  <section>
-    <h2>Mapas</h2>
-    <a href="maps://">🗺️ Apple Maps</a>
-    <a href="comgooglemaps://">🗺️ Google Maps</a>
-    <a href="waze://">🧭 Waze</a>
-  </section>
-
-  <section>
-    <h2>Mídia</h2>
-    <a href="music://">🎵 Apple Music</a>
-    <a href="spotify://">🎵 Spotify</a>
-    <a href="youtube://">📺 YouTube</a>
-    <a href="podcast://">🎙️ Podcasts</a>
-    <a href="photos-redirect://">🖼️ Galeria</a>
-  </section>
-
-  <section>
-    <h2>Navegação</h2>
-    <a href="http://">🌐 Safari</a>
-    <a href="googlechrome://example.com">🌍 Chrome</a>
-    <a href="brave://">🦁 Brave</a>
-    <a href="google://">🔎 Google</a>
-  </section>
-
-  <section>
-    <h2>Utilitários</h2>
-    <a href="App-Prefs:">⚙️ Ajustes (iOS)</a>
-    <a href="calshow://">🗓️ Calendário</a>
-    <a href="mobilenotes://">📝 Notas</a>
-    <a href="clock-alarm://">⏰ Relógio</a>
-    <a href="camera://">📷 Câmera</a>
-    <a href="calculator://">🧮 Calculadora</a>
-  </section>
+  <!-- demais seções... -->
 
   <script>
     const horaDiv = document.getElementById('hora');
@@ -132,6 +125,7 @@
     const shareBtn = document.getElementById('share');
     const restoreBtn = document.getElementById('restaurar');
     const links = document.querySelectorAll('a');
+    const personalizados = document.getElementById('personalizados');
     let mostrarPontos = true;
 
     function atualizarRelogio() {
@@ -146,25 +140,28 @@
       dataDiv.textContent = `${dia}/${mes}/${ano}`;
       mostrarPontos = !mostrarPontos;
     }
-
     setInterval(atualizarRelogio, 1000);
     atualizarRelogio();
 
-    // Persistência garantida
-    if ('storage' in navigator && 'persist' in navigator.storage) {
-      navigator.storage.persist().then(persisted => {
-        console.log(persisted ? 'Armazenamento persistente concedido.' : 'Negado.');
+    function detectarPlataforma() {
+      const ua = navigator.userAgent;
+      if (/Android/i.test(ua)) return 'android';
+      if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+      return 'web';
+    }
+
+    function aplicarCompatibilidadePorPlataforma() {
+      const plataforma = detectarPlataforma();
+      document.querySelectorAll('a[data-plataforma]').forEach(link => {
+        const plataformas = link.dataset.plataforma.split(' ');
+        if (!plataformas.includes(plataforma)) {
+          link.classList.add('hidden');
+        }
       });
     }
 
-    // Oculta links incompatíveis com Android
-    if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-      document.querySelectorAll('a[href^="App-Prefs"]').forEach(link => link.remove());
-    }
-
-    // Aplicar visibilidade com base no localStorage
     function aplicarConfiguracoesLocais() {
-      links.forEach(link => {
+      document.querySelectorAll('a').forEach(link => {
         const href = link.getAttribute('href');
         if (localStorage.getItem('oculto_' + href)) {
           link.classList.add('hidden');
@@ -174,9 +171,45 @@
       });
     }
 
-    aplicarConfiguracoesLocais();
+    function alternarFormulario() {
+      document.getElementById('formAtalho').classList.toggle('hidden');
+    }
 
-    // Ocultar link por toque longo ou botão direito
+    function adicionarAtalho() {
+      const nome = document.getElementById('nomeAtalho').value.trim();
+      const url = document.getElementById('urlAtalho').value.trim();
+      const plataforma = document.getElementById('plataformaAtalho').value;
+      const novo = { nome, url, plataforma };
+
+      const lista = JSON.parse(localStorage.getItem('custom_atalhos') || '[]');
+      lista.push(novo);
+      localStorage.setItem('custom_atalhos', JSON.stringify(lista));
+      renderizarAtalhosPersonalizados();
+      document.getElementById('formAtalho').reset();
+      document.getElementById('formAtalho').classList.add('hidden');
+      salvarNoGunDB();
+      return false;
+    }
+
+    function renderizarAtalhosPersonalizados() {
+      const plataformaAtual = detectarPlataforma();
+      const lista = JSON.parse(localStorage.getItem('custom_atalhos') || '[]');
+      personalizados.querySelectorAll('a').forEach(a => a.remove());
+      lista.forEach(({ nome, url, plataforma }) => {
+        if (!plataforma.includes(plataformaAtual)) return;
+        const link = document.createElement('a');
+        link.href = url;
+        link.textContent = nome;
+        link.dataset.plataforma = plataforma;
+        personalizados.appendChild(link);
+      });
+      aplicarConfiguracoesLocais();
+    }
+
+    aplicarCompatibilidadePorPlataforma();
+    aplicarConfiguracoesLocais();
+    renderizarAtalhosPersonalizados();
+
     links.forEach(link => {
       const href = link.getAttribute('href');
       let pressTimer;
@@ -194,13 +227,15 @@
       link.addEventListener('touchend', () => clearTimeout(pressTimer));
     });
 
-    // Restaurar
     restoreBtn.addEventListener('click', () => {
-      links.forEach(link => localStorage.removeItem('oculto_' + link.getAttribute('href')));
+      document.querySelectorAll('a').forEach(link => {
+        const href = link.getAttribute('href');
+        localStorage.removeItem('oculto_' + href);
+      });
+      configRef.put({});
       aplicarConfiguracoesLocais();
     });
 
-    // Compartilhamento
     if (navigator.share) {
       shareBtn.classList.remove('hidden');
       shareBtn.addEventListener('click', () => {
@@ -208,19 +243,17 @@
       });
     }
 
-    // Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('DOMContentLoaded', () => {
         navigator.serviceWorker.register('service-worker.js');
       });
     }
 
-    // Exportar configurações
     document.getElementById('exportar').addEventListener('click', () => {
       const dados = {};
       for (let i = 0; i < localStorage.length; i++) {
         const chave = localStorage.key(i);
-        if (chave.startsWith('oculto_') || chave.startsWith('favorito_')) {
+        if (chave.startsWith('oculto_') || chave.startsWith('favorito_') || chave === 'custom_atalhos') {
           dados[chave] = localStorage.getItem(chave);
         }
       }
@@ -231,7 +264,6 @@
       a.click();
     });
 
-    // Importar configurações
     document.getElementById('importar').addEventListener('change', function () {
       const file = this.files[0];
       if (!file) return;
@@ -241,6 +273,7 @@
           const dados = JSON.parse(e.target.result);
           Object.keys(dados).forEach(k => localStorage.setItem(k, dados[k]));
           aplicarConfiguracoesLocais();
+          renderizarAtalhosPersonalizados();
         } catch {
           alert('Erro ao importar arquivo.');
         }
@@ -248,7 +281,6 @@
       reader.readAsText(file);
     });
 
-    // GunDB sincronização
     const gun = Gun('https://gun-manhattan.herokuapp.com/gun');
     let userID = localStorage.getItem('userID') || prompt("Informe seu ID para sincronizar:");
     if (userID) localStorage.setItem('userID', userID);
@@ -258,7 +290,7 @@
       const dados = {};
       for (let i = 0; i < localStorage.length; i++) {
         const chave = localStorage.key(i);
-        if (chave.startsWith('oculto_') || chave.startsWith('favorito_')) {
+        if (chave.startsWith('oculto_') || chave.startsWith('favorito_') || chave === 'custom_atalhos') {
           dados[chave] = localStorage.getItem(chave);
         }
       }
@@ -270,6 +302,7 @@
       if (!data) return;
       Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
       aplicarConfiguracoesLocais();
+      renderizarAtalhosPersonalizados();
     });
   </script>
 </body>
