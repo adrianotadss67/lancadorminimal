@@ -75,19 +75,35 @@
       max-width: 360px;
       width: 100%;
     }
+    #menuToggle {
+      margin-bottom: 10px;
+    }
+    #menuContainer {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 360px;
+    }
+    #menuContainer.visible {
+      display: flex;
+    }
   </style>
 </head>
 <body>
   <div id="hora">--:--</div>
   <div id="data">--/--/--</div>
 
-  <button id="share" class="hidden">🔗 Compartilhar esta página</button>
-  <button id="restaurar">🔄 Mostrar todos os atalhos</button>
-  <button id="exportar">📤 Exportar configurações</button>
-  <input id="importar" type="file" accept=".json" style="display:none" />
-  <button onclick="document.getElementById('importar').click()">📥 Importar configurações</button>
-  <button onclick="salvarNoGunDB()">☁️ Sincronizar com a nuvem</button>
-  <button onclick="alternarFormulario()">➕ Adicionar atalho</button>
+  <button id="menuToggle">☰ Menu</button>
+  <div id="menuContainer">
+    <button id="share" class="hidden">🔗 Compartilhar esta página</button>
+    <button id="restaurar">🔄 Mostrar todos os atalhos</button>
+    <button id="exportar">📤 Exportar configurações</button>
+    <input id="importar" type="file" accept=".json" style="display:none" />
+    <button onclick="document.getElementById('importar').click()">📥 Importar configurações</button>
+    <button onclick="salvarNoGunDB()">☁️ Sincronizar com a nuvem</button>
+    <button onclick="alternarFormulario()">➕ Adicionar atalho</button>
+  </div>
 
   <form id="formAtalho" class="hidden" onsubmit="return adicionarAtalho()">
     <input type="text" id="nomeAtalho" placeholder="Nome do atalho" required />
