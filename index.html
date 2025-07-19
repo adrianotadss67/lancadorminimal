@@ -95,13 +95,6 @@
   <div id="data">--/--/--</div>
 
   <button id="menuToggle">☰ Menu</button>
-  <script>
-  document.getElementById('menuToggle').addEventListener('click', () => {
-    const menu = document.getElementById('menuContainer');
-    menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
-  });
-</script>
-
   <div id="menuContainer">
     <button id="share" class="hidden">🔗 Compartilhar esta página</button>
     <button id="restaurar">🔄 Mostrar todos os atalhos</button>
@@ -112,6 +105,8 @@
     <button onclick="alternarFormulario()">➕ Adicionar atalho</button>
   </div>
 
+  <div id="status" style="margin-top: 10px; font-size: 1.2rem; opacity: 0.7;"></div>
+  
   <form id="formAtalho" class="hidden" onsubmit="return adicionarAtalho()">
     <input type="text" id="nomeAtalho" placeholder="Nome do atalho" required />
     <input type="url" id="urlAtalho" placeholder="URL do atalho" required />
@@ -122,13 +117,13 @@
     </select>
     <button type="submit">Salvar</button>
   </form>
-
-  <section id="personalizados">
+  
+   <section id="personalizados">
     <h2>Atalhos Personalizados</h2>
     <!-- Conteúdo inserido via JS -->
   </section>
 
-  <section>
+<section>
     <h2>Comunicação</h2>
     <a href="whatsapp://send?text=Olá" data-plataforma="android ios">📲 WhatsApp</a>
     <a href="facetime://" data-plataforma="ios">📞 FaceTime</a>
@@ -175,8 +170,37 @@
     <a href="calculator://" data-plataforma="ios">🧮 Calculadora</a>
   </section>
 
+
   <script>
-    const horaDiv = document.getElementById('hora');
+   document.getElementById('menuToggle').addEventListener('click', () => {
+      const menu = document.getElementById('menuContainer');
+      menu.classList.toggle('visible');
+    });
+
+    const gun = Gun('https://gun-manhattan.herokuapp.com/gun');
+    let userID = localStorage.getItem('userID') || prompt("Informe seu ID para sincronizar:");
+    if (userID) localStorage.setItem('userID', userID);
+    const configRef = gun.get('lancador').get(userID);
+
+    document.getElementById('usuario').textContent = '🆔 ' + userID;
+    const statusDiv = document.getElementById('status');
+    const toast = document.getElementById('toast');
+    statusDiv.textContent = '🔄 Carregando configurações...';
+
+   configRef.once(data => {
+      if (data) {
+        Object.keys(data).forEach(k => {
+          if (data[k]) localStorage.setItem(k, data[k]);
+        });
+        if (typeof aplicarConfiguracoesLocais === 'function') aplicarConfiguracoesLocais();
+        if (typeof renderizarAtalhosPersonalizados === 'function') renderizarAtalhosPersonalizados();
+        statusDiv.textContent = '✅ Configurações sincronizadas';
+      } else {
+        statusDiv.textContent = 'ℹ️ Nenhuma configuração na nuvem';
+      }
+    });
+    
+     const horaDiv = document.getElementById('hora');
     const dataDiv = document.getElementById('data');
     const shareBtn = document.getElementById('share');
     const restoreBtn = document.getElementById('restaurar');
@@ -288,7 +312,7 @@
         const href = link.getAttribute('href');
         localStorage.removeItem('oculto_' + href);
       });
-      configRef.put({});
+      salvarNoGunDB();
       aplicarConfiguracoesLocais();
     });
 
@@ -305,7 +329,7 @@
       });
     }
 
-    document.getElementById('exportar').addEventListener('click', () => {
+      document.getElementById('exportar').addEventListener('click', () => {
       const dados = {};
       for (let i = 0; i < localStorage.length; i++) {
         const chave = localStorage.key(i);
@@ -316,8 +340,9 @@
       const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'configuracoes-lancador.json';
+      a.download = 'configuracoes-lancador.html';
       a.click();
+      mostrarToast('📤 Configurações exportadas');
     });
 
     document.getElementById('importar').addEventListener('change', function () {
@@ -327,22 +352,24 @@
       reader.onload = function (e) {
         try {
           const dados = JSON.parse(e.target.result);
-          Object.keys(dados).forEach(k => localStorage.setItem(k, dados[k]));
-          aplicarConfiguracoesLocais();
-          renderizarAtalhosPersonalizados();
+          if (confirm("Deseja substituir suas configurações atuais?")) {
+            Object.keys(dados).forEach(k => localStorage.setItem(k, dados[k]));
+            aplicarConfiguracoesLocais();
+            renderizarAtalhosPersonalizados();
+            salvarNoGunDB();
+            mostrarToast('📥 Configurações importadas');
+          }
         } catch {
-          alert('Erro ao importar arquivo.');
+          mostrarToast('❌ Erro ao importar arquivo');
         }
       };
       reader.readAsText(file);
     });
 
-    const gun = Gun('https://gun-manhattan.herokuapp.com/gun');
-    let userID = localStorage.getItem('userID') || prompt("Informe seu ID para sincronizar:");
+    
     if (userID) localStorage.setItem('userID', userID);
-    const configRef = gun.get('lancador').get(userID);
-
-    function salvarNoGunDB() {
+    
+     function salvarNoGunDB() {
       const dados = {};
       for (let i = 0; i < localStorage.length; i++) {
         const chave = localStorage.key(i);
@@ -351,8 +378,9 @@
         }
       }
       configRef.put(dados);
-      alert('Configurações sincronizadas!');
+      mostrarToast('☁️ Configurações sincronizadas!');
     }
+
 
     configRef.once(data => {
       if (!data) return;
@@ -360,6 +388,23 @@
       aplicarConfiguracoesLocais();
       renderizarAtalhosPersonalizados();
     });
+    
+    function mostrarToast(msg, tempo = 2000) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), tempo);
+    }
+
+     document.getElementById('restaurar').addEventListener('click', () => {
+      document.querySelectorAll('a').forEach(link => {
+        const href = link.getAttribute('href');
+        localStorage.removeItem('oculto_' + href);
+      });
+      aplicarConfiguracoesLocais();
+      salvarNoGunDB();
+      mostrarToast('🔄 Atalhos restaurados');
+    });
+    
   </script>
 </body>
 </html>
